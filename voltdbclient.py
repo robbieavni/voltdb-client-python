@@ -63,7 +63,7 @@ class ReadBuffer(object):
         self.clear()
 
     def clear(self):
-        self._buf = ""
+        self._buf = b""
         self._off = 0
 
     def buffer_length(self):
@@ -84,8 +84,8 @@ class ReadBuffer(object):
     def unpack(self, format, size):
         try:
             values = struct.unpack_from(format, self._buf, self._off)
-        except struct.error, e:
-            print 'Exception unpacking %d bytes using format "%s": %s' % (size, format, str(e))
+        except struct.error as e:
+            print('Exception unpacking %d bytes using format "%s": %s' % (size, format, str(e)))
         self.shift(size)
         return values
 
@@ -147,7 +147,7 @@ class FastSerializer:
         :param default_timeout: default timeout (secs) or None for all other operations (default=None)
         """
         # connect a socket to host, port and get a file object
-        self.wbuf = array.array('c')
+        self.wbuf = array.array("B")
         self.host = host
         self.port = port
         if not dump_file_path is None:
@@ -286,7 +286,7 @@ class FastSerializer:
 
         # password supplied, sha-256 hash it
         m = hashlib.sha256()
-        m.update(password)
+        m.update(b"")
         pwHash = m.digest()
         self.wbuf.extend(pwHash)
 
@@ -296,8 +296,8 @@ class FastSerializer:
         # A length, version number, and status code is returned
         try:
             self.bufferForRead()
-        except IOError, e:
-            print "ERROR: Connection failed. Please check that the host and port are correct."
+        except IOError as e:
+            print("ERROR: Connection failed. Please check that the host and port are correct.")
             raise e
         except socket.timeout:
             raise SystemExit("Authentication timed out after %d seconds."
@@ -331,7 +331,7 @@ class FastSerializer:
         # in the network order.
         ttllen = self.wbuf.buffer_info()[1] * self.wbuf.itemsize
         lenBytes = struct.pack(self.inputBOM + 'i', ttllen)
-        map(lambda x: self.wbuf.insert(0, x), lenBytes[::-1])
+        list(map(lambda x: self.wbuf.insert(0, x), lenBytes[::-1]))
 
     def size(self):
         """Returns the size of the write buffer.
@@ -341,23 +341,23 @@ class FastSerializer:
 
     def flush(self):
         if self.socket is None:
-            print "ERROR: not connected to server."
+            print("ERROR: not connected to server.")
             exit(-1)
 
         if self.dump_file != None:
             self.dump_file.write(self.wbuf)
             self.dump_file.write("\n")
         self.socket.sendall(self.wbuf.tostring())
-        self.wbuf = array.array('c')
+        self.wbuf = array.array('B')
 
     def bufferForRead(self):
         if self.socket is None:
-            print "ERROR: not connected to server."
+            print("ERROR: not connected to server.")
             exit(-1)
 
         # fully buffer a new length preceded message from socket
         # read the length. the read until the buffer is completed.
-        responseprefix = ""
+        responseprefix = b""
         while (len(responseprefix) < 4):
             responseprefix += self.socket.recv(4 - len(responseprefix))
             if responseprefix == "":
@@ -377,14 +377,14 @@ class FastSerializer:
 
     def read(self, type):
         if type not in self.READER:
-            print "ERROR: can't read wire type(", type, ") yet."
+            print("ERROR: can't read wire type(", type, ") yet.")
             exit(-2)
 
         return self.READER[type]()
 
     def write(self, type, value):
         if type not in self.WRITER:
-            print "ERROR: can't write wire type(", type, ") yet."
+            print("ERROR: can't write wire type(", type, ") yet.")
             exit(-2)
 
         return self.WRITER[type](value)
@@ -395,7 +395,7 @@ class FastSerializer:
 
     def writeWireType(self, type, value):
         if type not in self.WRITER:
-            print "ERROR: can't write wire type(", type, ") yet."
+            print("ERROR: can't write wire type(", type, ") yet.")
             exit(-2)
 
         self.writeByte(type)
@@ -415,7 +415,7 @@ class FastSerializer:
 
     def readArray(self, type):
         if type not in self.ARRAY_READER:
-            print "ERROR: can't read wire type(", type, ") yet."
+            print("ERROR: can't read wire type(", type, ") yet.")
             exit(-2)
 
         return self.ARRAY_READER[type]()
@@ -431,7 +431,7 @@ class FastSerializer:
             return
 
         if type not in self.ARRAY_READER:
-            print "ERROR: Unsupported date type (", type, ")."
+            print("ERROR: Unsupported date type (", type, ").")
             exit(-2)
 
         # serialize arrays of bytes as larger values to support
@@ -446,7 +446,7 @@ class FastSerializer:
 
     def writeWireTypeArray(self, type, array):
         if type not in self.ARRAY_READER:
-            print "ERROR: can't write wire type(", type, ") yet."
+            print("ERROR: can't write wire type(", type, ") yet.")
             exit(-2)
 
         self.writeByte(type)
@@ -460,7 +460,7 @@ class FastSerializer:
     def readByteArray(self):
         length = self.readInt32()
         val = self.readByteArrayContent(length)
-        val = map(self.NullCheck[self.VOLTTYPE_TINYINT], val)
+        val = list(map(self.NullCheck[self.VOLTTYPE_TINYINT], val))
         return val
 
     def readByte(self):
@@ -485,7 +485,7 @@ class FastSerializer:
     def readInt16Array(self):
         length = self.readInt16()
         val = self.readInt16ArrayContent(length)
-        val = map(self.NullCheck[self.VOLTTYPE_SMALLINT], val)
+        val = list(map(self.NullCheck[self.VOLTTYPE_SMALLINT], val))
         return val
 
     def readInt16(self):
@@ -507,7 +507,7 @@ class FastSerializer:
     def readInt32Array(self):
         length = self.readInt16()
         val = self.readInt32ArrayContent(length)
-        val = map(self.NullCheck[self.VOLTTYPE_INTEGER], val)
+        val = list(map(self.NullCheck[self.VOLTTYPE_INTEGER], val))
         return val
 
     def readInt32(self):
@@ -529,7 +529,7 @@ class FastSerializer:
     def readInt64Array(self):
         length = self.readInt16()
         val = self.readInt64ArrayContent(length)
-        val = map(self.NullCheck[self.VOLTTYPE_BIGINT], val)
+        val = list(map(self.NullCheck[self.VOLTTYPE_BIGINT], val))
         return val
 
     def readInt64(self):
@@ -551,7 +551,7 @@ class FastSerializer:
     def readFloat64Array(self):
         length = self.readInt16()
         val = self.readFloat64ArrayContent(length)
-        val = map(self.NullCheck[self.VOLTTYPE_FLOAT], val)
+        val = list(map(self.NullCheck[self.VOLTTYPE_FLOAT], val))
         return val
 
     def readFloat64(self):
@@ -589,7 +589,7 @@ class FastSerializer:
         retval = []
         cnt = self.readInt16()
 
-        for i in xrange(cnt):
+        for i in range(cnt):
             retval.append(self.readString())
 
         return tuple(retval)
@@ -672,21 +672,21 @@ class FastSerializer:
         # Unleash the powers of the butterfly
         val[0] &= ~mostSignificantBit
         # Get the 2's complement
-        for x in xrange(16):
+        for x in range(16):
             unscaledValue += val[x] << ((15 - x) * 8)
-        unscaledValue = map(lambda x: int(x), str(abs(unscaledValue)))
+        unscaledValue = [int(x) for x in str(abs(unscaledValue))]
         return decimal.Decimal((isNegative, tuple(unscaledValue),
                                 -self.__class__.DEFAULT_DECIMAL_SCALE))
 
     def readDecimalArray(self):
         retval = []
         cnt = self.readInt16()
-        for i in xrange(cnt):
+        for i in range(cnt):
             retval.append(self.readDecimal())
         return tuple(retval)
 
     def __intToBytes(self, value, sign):
-        value_bytes = ""
+        value_bytes = b""
         if sign == 1:
             value = ~value + 1      # 2's complement
         # Turn into byte array
@@ -792,12 +792,10 @@ class VoltTable:
         result += "column count: %d\n" % (len(self.columns))
         result += "row count: %d\n" % (len(self.tuples))
         result += "cols: "
-        result += ", ".join(map(lambda x: str(x), self.columns))
+        result += ", ".join([str(x) for x in self.columns])
         result += "\n"
         result += "rows -\n"
-        result += "\n".join(map(lambda x:
-                                    str(map(lambda y: if_else(y == None, "NULL", y),
-                                            x)), self.tuples))
+        result += "\n".join([str([if_else(y == None, "NULL", y) for y in x]) for x in self.tuples])
 
         return result
 
@@ -832,19 +830,19 @@ class VoltTable:
         headersize = self.fser.readInt32()
         statuscode = self.fser.readByte()
         columncount = self.fser.readInt16()
-        for i in xrange(columncount):
+        for i in range(columncount):
             column = VoltColumn(fser = self.fser)
             self.columns.append(column)
-        map(lambda x: x.readName(self.fser), self.columns)
+        list(map(lambda x: x.readName(self.fser), self.columns))
 
         # 3.
         rowcount = self.fser.readInt32()
-        for i in xrange(rowcount):
+        for i in range(rowcount):
             rowsize = self.fser.readInt32()
             # list comprehension: build list by calling read for each column in
             # row/tuple
             row = [self.fser.read(self.columns[j].type)
-                   for j in xrange(columncount)]
+                   for j in range(columncount)]
             self.tuples.append(row)
 
         return self
@@ -858,8 +856,8 @@ class VoltTable:
 
         header_fser.writeByte(0)
         header_fser.writeInt16(len(self.columns))
-        map(lambda x: x.writeType(header_fser), self.columns)
-        map(lambda x: x.writeName(header_fser), self.columns)
+        list(map(lambda x: x.writeType(header_fser), self.columns))
+        list(map(lambda x: x.writeName(header_fser), self.columns))
 
         table_fser.writeInt32(header_fser.size() - 4)
         table_fser.writeRawBytes(header_fser.getRawBytes())
@@ -868,8 +866,8 @@ class VoltTable:
         for i in self.tuples:
             row_fser = FastSerializer()
 
-            map(lambda x: row_fser.write(self.columns[x].type, i[x]),
-                xrange(len(i)))
+            list(map(lambda x: row_fser.write(self.columns[x].type, i[x]),
+                range(len(i))))
 
             table_fser.writeInt32(row_fser.size())
             table_fser.writeRawBytes(row_fser.getRawBytes())
@@ -906,7 +904,7 @@ class VoltException:
 
         self.message = []
         self.message_len = fser.readInt32()
-        for i in xrange(0, self.message_len):
+        for i in range(0, self.message_len):
             self.message.append(chr(fser.readByte()))
         self.message = ''.join(self.message)
 
@@ -919,7 +917,7 @@ class VoltException:
         elif self.type == self.VOLTEXCEPTION_SQLEXCEPTION or \
                 self.type == self.VOLTEXCEPTION_CONSTRAINTFAILURE:
             self.sql_state_bytes = []
-            for i in xrange(0, 5):
+            for i in range(0, 5):
                 self.sql_state_bytes.append(chr(fser.readByte()))
             self.sql_state_bytes = ''.join(self.sql_state_bytes)
 
@@ -931,12 +929,12 @@ class VoltException:
                 self.table_name = fser.readString()
                 self.buffer_size = fser.readInt32()
                 self.buffer = []
-                for i in xrange(0, self.buffer_size):
+                for i in range(0, self.buffer_size):
                     self.buffer.append(fser.readByte())
         else:
-            for i in xrange(0, self.length - 3 - 2 - self.message_len):
+            for i in range(0, self.length - 3 - 2 - self.message_len):
                 fser.readByte()
-            print "Python client deserialized unknown VoltException."
+            print("Python client deserialized unknown VoltException.")
 
     def __str__(self):
         msgstr = "VoltException: type: %s\n" % self.typestr
@@ -993,7 +991,7 @@ class VoltResponse:
         # tables[]
         tablecount = fser.readInt16()
         self.tables = []
-        for i in xrange(tablecount):
+        for i in range(tablecount):
             table = VoltTable(fser)
             self.tables.append(table.readFromSerializer())
 
@@ -1024,10 +1022,10 @@ class VoltProcedure:
         self.fser.writeString(self.name)
         self.fser.writeInt64(1)            # client handle
         self.fser.writeInt16(len(self.paramtypes))
-        for i in xrange(len(self.paramtypes)):
+        for i in range(len(self.paramtypes)):
             try:
                 iter(params[i]) # Test if this is an array
-                if isinstance(params[i], basestring): # String is a special case
+                if isinstance(params[i], str): # String is a special case
                     raise TypeError
 
                 self.fser.writeByte(FastSerializer.ARRAY)
@@ -1052,7 +1050,7 @@ class VoltProcedure:
             except socket.timeout:
                 res = VoltResponse(None)
                 res.statusString = "timeout: procedure call took longer than %d seconds" % timeout
-            except IOError, err:
+            except IOError as err:
                 res = VoltResponse(None)
                 res.statusString = str(err)
         finally:
